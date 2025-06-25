@@ -1,9 +1,10 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { RefreshCw, Play } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import Cannon from './Cannon';
+import BallProjectile from './BallProjectile';
 
 interface Bird {
   x: number;
@@ -18,11 +19,29 @@ interface Pipe {
   passed: boolean;
 }
 
+interface CannonEntity {
+  id: number;
+  x: number;
+  y: number;
+  direction: 'left' | 'right';
+  lastShot: number;
+}
+
+interface BallProjectileEntity {
+  id: number;
+  x: number;
+  y: number;
+  velocity: number;
+  direction: 'left' | 'right';
+}
+
 const FlappyBirdGame = () => {
   const { toast } = useToast();
   const [gameState, setGameState] = useState<'waiting' | 'playing' | 'gameOver'>('waiting');
   const [bird, setBird] = useState<Bird>({ x: 100, y: 250, velocity: 0 });
   const [pipes, setPipes] = useState<Pipe[]>([]);
+  const [cannons, setCannons] = useState<CannonEntity[]>([]);
+  const [ballProjectiles, setBallProjectiles] = useState<BallProjectileEntity[]>([]);
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(() => {
     const saved = localStorage.getItem('flappyBirdHighScore');
@@ -31,6 +50,8 @@ const FlappyBirdGame = () => {
   
   const gameLoopRef = useRef<number>();
   const lastTimeRef = useRef<number>(0);
+  const cannonIdRef = useRef<number>(0);
+  const projectileIdRef = useRef<number>(0);
 
   const BIRD_SIZE = 30;
   const PIPE_WIDTH = 60;
@@ -38,12 +59,16 @@ const FlappyBirdGame = () => {
   const GRAVITY = 0.5;
   const JUMP_FORCE = -8;
   const PIPE_SPEED = 2;
+  const FIRE_SPEED = 4;
+  const CANNON_SHOOT_INTERVAL = 2000; // 2 seconds
   const GAME_WIDTH = 800;
   const GAME_HEIGHT = 500;
 
   const resetGame = useCallback(() => {
     setBird({ x: 100, y: 250, velocity: 0 });
     setPipes([]);
+    setCannons([]);
+    setBallProjectiles([]);
     setScore(0);
     setGameState('waiting');
   }, []);
@@ -61,7 +86,7 @@ const FlappyBirdGame = () => {
     }
   }, [gameState, startGame]);
 
-  const checkCollision = useCallback((birdY: number, pipes: Pipe[]) => {
+  const checkCollision = useCallback((birdY: number, pipes: Pipe[], ballProjectiles: BallProjectileEntity[]) => {
     // Check ground and ceiling collision
     if (birdY > GAME_HEIGHT - BIRD_SIZE || birdY < 0) {
       return true;
@@ -73,6 +98,18 @@ const FlappyBirdGame = () => {
         bird.x + BIRD_SIZE > pipe.x &&
         bird.x < pipe.x + PIPE_WIDTH &&
         (birdY < pipe.height || birdY + BIRD_SIZE > pipe.height + PIPE_GAP)
+      ) {
+        return true;
+      }
+    }
+
+    // Check ball projectile collision
+    for (const projectile of ballProjectiles) {
+      if (
+        bird.x + BIRD_SIZE > projectile.x &&
+        bird.x < projectile.x + 20 &&
+        birdY + BIRD_SIZE > projectile.y &&
+        birdY < projectile.y + 20
       ) {
         return true;
       }
@@ -91,7 +128,7 @@ const FlappyBirdGame = () => {
       const newVelocity = prev.velocity + GRAVITY;
       const newY = prev.y + newVelocity;
       
-      if (checkCollision(newY, pipes)) {
+      if (checkCollision(newY, pipes, ballProjectiles)) {
         setGameState('gameOver');
         if (score > highScore) {
           setHighScore(score);
@@ -111,6 +148,7 @@ const FlappyBirdGame = () => {
       };
     });
 
+    // Update pipes
     setPipes(prev => {
       let newPipes = prev.map(pipe => ({ ...pipe, x: pipe.x - PIPE_SPEED }))
         .filter(pipe => pipe.x > -PIPE_WIDTH);
@@ -136,8 +174,50 @@ const FlappyBirdGame = () => {
       return newPipes;
     });
 
+    // Update cannons
+    setCannons(prev => {
+      let newCannons = prev.map(cannon => ({ ...cannon, x: cannon.x - PIPE_SPEED }))
+        .filter(cannon => cannon.x > -50);
+
+      // Add new cannon occasionally
+      if (Math.random() < 0.003 && (newCannons.length === 0 || newCannons[newCannons.length - 1].x < GAME_WIDTH - 200)) {
+        const direction = Math.random() > 0.5 ? 'left' : 'right';
+        newCannons.push({
+          id: cannonIdRef.current++,
+          x: GAME_WIDTH,
+          y: Math.random() * (GAME_HEIGHT - 100) + 50,
+          direction,
+          lastShot: currentTime
+        });
+      }
+
+      // Check if cannons should shoot
+      newCannons.forEach(cannon => {
+        if (currentTime - cannon.lastShot > CANNON_SHOOT_INTERVAL) {
+          cannon.lastShot = currentTime;
+          setBallProjectiles(prev => [...prev, {
+            id: projectileIdRef.current++,
+            x: cannon.direction === 'right' ? cannon.x + 40 : cannon.x - 20,
+            y: cannon.y + 10,
+            velocity: cannon.direction === 'right' ? FIRE_SPEED : -FIRE_SPEED,
+            direction: cannon.direction
+          }]);
+        }
+      });
+
+      return newCannons;
+    });
+
+    // Update ball projectiles
+    setBallProjectiles(prev => 
+      prev.map(projectile => ({
+        ...projectile,
+        x: projectile.x + projectile.velocity
+      })).filter(projectile => projectile.x > -30 && projectile.x < GAME_WIDTH + 30)
+    );
+
     gameLoopRef.current = requestAnimationFrame(gameLoop);
-  }, [gameState, pipes, score, highScore, checkCollision, toast]);
+  }, [gameState, pipes, ballProjectiles, score, highScore, checkCollision, toast, bird.x]);
 
   useEffect(() => {
     if (gameState === 'playing') {
@@ -202,6 +282,25 @@ const FlappyBirdGame = () => {
                 }}
               />
             </div>
+          ))}
+
+          {/* Cannons */}
+          {cannons.map((cannon) => (
+            <Cannon
+              key={cannon.id}
+              x={cannon.x}
+              y={cannon.y}
+              direction={cannon.direction}
+            />
+          ))}
+
+          {/* Ball Projectiles */}
+          {ballProjectiles.map((projectile) => (
+            <BallProjectile
+              key={projectile.id}
+              x={projectile.x}
+              y={projectile.y}
+            />
           ))}
 
           {/* Bird */}
@@ -276,7 +375,7 @@ const FlappyBirdGame = () => {
           {/* Instructions */}
           {gameState === 'playing' && (
             <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white text-sm drop-shadow-lg text-center">
-              Click or press SPACE to flap
+              Click or press SPACE to flap • Avoid pipes and balls!
             </div>
           )}
         </div>
