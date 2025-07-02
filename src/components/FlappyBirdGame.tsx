@@ -5,6 +5,7 @@ import { RefreshCw, Play } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Cannon from './Cannon';
 import BallProjectile from './BallProjectile';
+import PipeFire from './PipeFire';
 
 interface Bird {
   x: number;
@@ -280,6 +281,17 @@ const FlappyBirdGame = () => {
                   width: PIPE_WIDTH,
                   height: GAME_HEIGHT - pipe.height - PIPE_GAP,
                 }}
+              />
+              {/* Fire effects */}
+              <PipeFire
+                x={pipe.x}
+                y={pipe.height}
+                position="top"
+              />
+              <PipeFire
+                x={pipe.x}
+                y={pipe.height + PIPE_GAP}
+                position="bottom"
               />
             </div>
           ))}
