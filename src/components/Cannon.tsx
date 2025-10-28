@@ -15,7 +15,7 @@ const BallProjectile = ({ x, y, size = 20 }: BallProjectileProps) => {
       style={{
         left: x,
         top: y,
-        width: size,Add commentMore actions
+        width: size,
         height: size,
       }}
     >
