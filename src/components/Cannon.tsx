@@ -1,79 +1,51 @@
+
 import React from 'react';
-import BallProjectile from './BallProjectile';
 
 interface CannonProps {
   x: number;
   y: number;
-  size?: number;     // overall scale
-  angle?: number;    // barrel angle (degrees)
-  showProjectile?: boolean;
+  direction: 'left' | 'right';
+  birdX: number;
+  birdY: number;
 }
 
-export default function Cannon({
-  x,
-  y,
-  size = 48,
-  angle = 0,
-  showProjectile = false,
-}: CannonProps) {
-  // Barrel and turret geometry
-  const barrelLength = Math.round(size * 1.2);
-  const projectileOffset = barrelLength + 8;
-  const rotate = `rotate(${angle}deg)`;
+const Cannon = ({ x, y, direction, birdX, birdY }: CannonProps) => {
+  // Calculate angle from cannon to bird
+  const cannonCenterX = x + 20;
+  const cannonCenterY = y + 12.5;
+  const angle = Math.atan2(birdY - cannonCenterY, birdX - cannonCenterX) * (180 / Math.PI);
 
   return (
     <div
-      className="absolute"
+      className="absolute z-10"
       style={{
         left: x,
         top: y,
-        width: size * 2,
-        height: size * 2,
-        transform: 'translate(-50%, -50%)',
-        pointerEvents: 'none',
+        width: 40,
+        height: 25,
       }}
     >
-      {/* Turret base */}
-      <div
-        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gray-700 shadow-inner"
+      {/* Cannon base */}
+      <div className="absolute inset-0 bg-gradient-to-r from-gray-700 to-gray-800 border-2 border-gray-900 rounded-lg">
+        <div className="absolute left-1 top-1/2 transform -translate-y-1/2 w-3 h-4 bg-gray-600 rounded"></div>
+      </div>
+      
+      {/* Rotating turret */}
+      <div 
+        className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 transition-transform duration-150"
         style={{
-          width: size * 1.4,
-          height: size * 1.4,
+          transform: `translate(-50%, -50%) rotate(${angle}deg)`,
+          transformOrigin: 'center'
         }}
       >
-        {/* Rotating barrel */}
-        <div
-          className="absolute left-1/2 top-1/2 -translate-y-1/2 bg-gray-800 rounded-full shadow-md"
-          style={{
-            width: barrelLength,
-            height: Math.max(8, size * 0.25),
-            transformOrigin: '0% 50%',
-            transform: `${rotate} translateY(-50%) translateX(${size * -0.1}px)`,
-          }}
-        >
-          {/* Muzzle ring */}
-          <div
-            className="absolute right-0 top-1/2 -translate-y-1/2 bg-gray-600 rounded-full"
-            style={{
-              width: Math.max(8, size * 0.3),
-              height: Math.max(8, size * 0.3),
-              boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.4)',
-            }}
-          />
-        </div>
+        {/* Turret barrel */}
+        <div className="w-8 h-2 bg-gray-900 rounded-r-full border border-gray-950 shadow-lg"></div>
       </div>
-
-      {/* Optional projectile fired from barrel tip */}
-      {showProjectile && (
-        <div
-          className="absolute left-1/2 top-1/2"
-          style={{
-            transform: `${rotate} translateX(${projectileOffset}px) translateY(-50%)`,
-          }}
-        >
-          <BallProjectile x={0} y={0} size={Math.max(10, size * 0.3)} />
-        </div>
-      )}
+      
+      {/* Turret base pivot */}
+      <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-red-600 rounded-full border border-red-800 shadow-md z-10"></div>
     </div>
   );
-}
+};
+
+export default Cannon;
