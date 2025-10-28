@@ -1,4 +1,5 @@
 Follow these steps:
+Also make sure you have Node (v18+)
 
 ```
 # Step 1: Clone the repository using the project's Git URL.
@@ -13,3 +14,5 @@ npm i
 # Step 4: Start the development server with auto-reloading and an instant preview.
 npm run dev
 ```
+
+![Screenshot of app](game.png)   
