@@ -5,7 +5,7 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-  const repoName = "Flappy-Bird"; // <- replace with your GitHub repo name
+  const repoName = "flappy-fly-forward"; // <- replace with your GitHub repo name
   return ({
     base: mode === "development" ? "/" : `/${repoName}/`,
     server: {
